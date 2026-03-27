@@ -1,0 +1,11 @@
+﻿.env
+*.env
+!.env.example
+token.txt
+*.token
+config.json
+setup_variables.py
+__pycache__/
+*.py[cod]
+venv/
+.venv/

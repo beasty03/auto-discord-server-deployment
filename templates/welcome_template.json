@@ -1,0 +1,31 @@
+{
+    "roles": [
+        {
+        "name": "Member",
+        "permissions": {
+            "read_messages": true,
+            "send_messages": true,
+            "connect": true,
+            "speak": true
+        },
+        "color": "green",
+        "hoist": true
+        }
+    ],
+    "text_channels": [
+        {
+            "name": "welcome",
+            "permissions": {
+                "view": ["@everyone"],
+                "deny": []
+            }
+        },
+                {
+            "name": "rules",
+            "permissions": {
+                "view": ["@everyone"],
+                "deny": []
+            }
+        }
+    ]    
+}

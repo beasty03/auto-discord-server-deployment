@@ -1,0 +1,111 @@
+import sqlite3
+import json
+import os
+from discord.ext import commands
+from setup_variables import DB_FILE, TEMPLATE_DIR
+
+TEMPLATE_PATH = os.path.join(TEMPLATE_DIR, 'user_database_template.json')
+
+
+class DatabaseManager:
+    def __init__(self, db_file, template_file):
+        # open sqlite synchronously (fine if used only in the bot's event loop)
+        self.connection = sqlite3.connect(db_file)
+        self.cursor = self.connection.cursor()
+        self.template = self._load_template(template_file)
+        self._create_user_table()
+
+    def _load_template(self, template_file):
+        """Load JSON template for user DB."""
+        with open(template_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+
+    def _create_user_table(self):
+        """Create users table dynamically based on template."""
+        user_fields = self.template.get("user", {})
+        
+        # Build column definitions dynamically from template
+        columns = ["id INTEGER PRIMARY KEY AUTOINCREMENT"]
+        
+        for field_name, default_value in user_fields.items():
+            if field_name == "user_id":
+                columns.append("user_id TEXT UNIQUE")
+            elif isinstance(default_value, list):
+                columns.append(f"{field_name} TEXT")  # Store arrays as JSON strings
+            else:
+                columns.append(f"{field_name} TEXT")
+        
+        create_sql = f"CREATE TABLE IF NOT EXISTS users ({', '.join(columns)})"
+        
+        self.cursor.execute(create_sql)
+        self.connection.commit()
+        print(f"[DatabaseManager] Table created with structure: {columns}")
+
+    def get_user(self, user_id: str):
+        """Fetch a user by user_id."""
+        self.cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
+        return self.cursor.fetchone()
+
+    def add_user(self, user_dict):
+        """Add a user dynamically based on template fields."""
+        user_fields = list(self.template.get("user", {}).keys())
+        fields_str = ", ".join(user_fields)
+        placeholders = ", ".join(["?" for _ in user_fields])
+        values = [user_dict.get(field) for field in user_fields]
+        
+        self.cursor.execute(
+            f"INSERT OR IGNORE INTO users ({fields_str}) VALUES ({placeholders})",
+            values
+        )
+        self.connection.commit()
+
+    def update_user(self, user_id: str, user_dict):
+        """Update a user dynamically based on template fields."""
+        user_fields = [f for f in self.template.get("user", {}).keys() if f != "user_id"]
+        set_clause = ", ".join([f"{field}=?" for field in user_fields])
+        values = [user_dict.get(field) for field in user_fields]
+        values.append(user_id)
+        
+        self.cursor.execute(
+            f"UPDATE users SET {set_clause} WHERE user_id=?",
+            values
+        )
+        self.connection.commit()
+
+    def delete_user(self, user_id: str):
+        """Delete a user by user_id."""
+        self.cursor.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
+        self.connection.commit()
+
+    def get_all_users(self):
+        """Fetch all users."""
+        self.cursor.execute("SELECT * FROM users")
+        return self.cursor.fetchall()
+
+    def close(self):
+        """Close the DB connection."""
+        try:
+            self.connection.close()
+        except Exception:
+            pass
+
+
+class DatabaseManagerCog(commands.Cog):
+    def __init__(self, bot, db_manager: DatabaseManager):
+        self.bot = bot
+        self.db_manager = db_manager
+
+    @commands.command()
+    async def some_command(self, ctx):
+        await ctx.send("This is a command from the Database Manager cog!")
+
+    def cog_unload(self):
+        # sync cleanup when cog is unloaded
+        self.db_manager.close()
+
+
+# Module-level async setup required by discord.py v2+
+async def setup(bot):
+    # instantiate DatabaseManager here (deferred from import time)
+    db_manager = DatabaseManager(DB_FILE, TEMPLATE_PATH)
+    await bot.add_cog(DatabaseManagerCog(bot, db_manager))
