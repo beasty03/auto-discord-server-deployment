@@ -6,7 +6,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # THEN import
-from setup_variables import CLIENT_ID
+CLIENT_ID = 1486718913273135124
 from discord.ext import commands
 
 def generate_invite_link(client_id, permissions=8):
