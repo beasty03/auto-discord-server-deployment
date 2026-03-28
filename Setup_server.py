@@ -6,14 +6,16 @@ import os
 import sys
 import aiohttp
 
-# Add parent directory to path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from setup_variables import SETUPBOT_TOKEN, GUILD_ID, CONFIG_JSON, TEMPLATE_DIR
-
 # Load config
+CONFIG_JSON = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json')
+
 with open(CONFIG_JSON, 'r', encoding='utf-8-sig') as f:
     config = json.load(f)
+
+# Extract variables from config
+SETUPBOT_TOKEN = config['bot_token']
+GUILD_ID = config['server']['guild_id']
+TEMPLATE_DIR = config['paths']['template_dir']
 
 # Load templates
 MOD_TEMPLATE_PATH = os.path.join(TEMPLATE_DIR, 'moderation_template.json')
