@@ -2,7 +2,16 @@ import sqlite3
 import json
 import os
 from discord.ext import commands
-from setup_variables import DB_FILE, TEMPLATE_DIR
+
+# Load config
+CONFIG_JSON = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json')
+
+with open(CONFIG_JSON, 'r', encoding='utf-8-sig') as f:
+    config = json.load(f)
+
+# Extract variables from config
+DB_FILE = config['paths'].get('database_file', 'bot_database.db')
+TEMPLATE_DIR = config['paths']['template_dir']
 
 TEMPLATE_PATH = os.path.join(TEMPLATE_DIR, 'user_database_template.json')
 
