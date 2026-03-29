@@ -18,14 +18,35 @@ TEMPLATE_PATH = os.path.join(TEMPLATE_DIR, 'user_database_template.json')
 
 class DatabaseManager:
     def __init__(self, db_file, template_file):
-        # open sqlite synchronously (fine if used only in the bot's event loop)
-        self.connection = sqlite3.connect(db_file)
+        # Ensure database directory exists
+        db_dir = os.path.dirname(db_file)
+        if db_dir and not os.path.exists(db_dir):
+            os.makedirs(db_dir)
+            print(f"[DatabaseManager] Created database directory: {db_dir}")
+        
+        # Convert to absolute path for clarity
+        self.db_file = os.path.abspath(db_file)
+        
+        # Check if database file exists (for logging purposes)
+        db_exists = os.path.exists(self.db_file)
+        
+        # Open sqlite synchronously (fine if used only in the bot's event loop)
+        self.connection = sqlite3.connect(self.db_file)
         self.cursor = self.connection.cursor()
+        
+        if not db_exists:
+            print(f"[DatabaseManager] Created new database file: {self.db_file}")
+        else:
+            print(f"[DatabaseManager] Connected to existing database: {self.db_file}")
+        
         self.template = self._load_template(template_file)
         self._create_user_table()
 
     def _load_template(self, template_file):
         """Load JSON template for user DB."""
+        if not os.path.exists(template_file):
+            raise FileNotFoundError(f"Template file not found: {template_file}")
+        
         with open(template_file, 'r', encoding='utf-8') as f:
             return json.load(f)
 
@@ -48,7 +69,7 @@ class DatabaseManager:
         
         self.cursor.execute(create_sql)
         self.connection.commit()
-        print(f"[DatabaseManager] Table created with structure: {columns}")
+        print(f"[DatabaseManager] Table 'users' created/verified with structure: {columns}")
 
     def get_user(self, user_id: str):
         """Fetch a user by user_id."""
@@ -95,8 +116,9 @@ class DatabaseManager:
         """Close the DB connection."""
         try:
             self.connection.close()
-        except Exception:
-            pass
+            print(f"[DatabaseManager] Database connection closed")
+        except Exception as e:
+            print(f"[DatabaseManager] Error closing database: {e}")
 
 
 class DatabaseManagerCog(commands.Cog):
@@ -115,6 +137,14 @@ class DatabaseManagerCog(commands.Cog):
 
 # Module-level async setup required by discord.py v2+
 async def setup(bot):
-    # instantiate DatabaseManager here (deferred from import time)
-    db_manager = DatabaseManager(DB_FILE, TEMPLATE_PATH)
-    await bot.add_cog(DatabaseManagerCog(bot, db_manager))
+    try:
+        # instantiate DatabaseManager here (deferred from import time)
+        db_manager = DatabaseManager(DB_FILE, TEMPLATE_PATH)
+        await bot.add_cog(DatabaseManagerCog(bot, db_manager))
+        print("[DatabaseManager] Cog loaded successfully")
+    except FileNotFoundError as e:
+        print(f"[DatabaseManager] Error loading cog: {e}")
+        raise
+    except Exception as e:
+        print(f"[DatabaseManager] Unexpected error loading cog: {e}")
+        raise
