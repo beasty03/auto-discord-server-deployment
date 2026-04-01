@@ -3,8 +3,8 @@ import json
 import os
 from discord.ext import commands
 
-# Load config
-CONFIG_JSON = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json')
+# Load config - look in parent directory (root) instead of cogs directory
+CONFIG_JSON = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config.json')
 
 with open(CONFIG_JSON, 'r', encoding='utf-8-sig') as f:
     config = json.load(f)
@@ -14,7 +14,6 @@ DB_FILE = config['paths'].get('database_file', 'bot_database.db')
 TEMPLATE_DIR = config['paths']['template_dir']
 
 TEMPLATE_PATH = os.path.join(TEMPLATE_DIR, 'user_database_template.json')
-
 
 class DatabaseManager:
     def __init__(self, db_file, template_file):

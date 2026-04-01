@@ -12,12 +12,8 @@ from cogs.database_manager import DatabaseManager
 # Load config from parent directory
 CONFIG_JSON = os.path.join(parent_dir, 'config.json')
 
-try:
-    with open(CONFIG_JSON, 'r', encoding='utf-8-sig') as f:
-        config = json.load(f)
-except FileNotFoundError:
-    print(f"[DatabaseInit] ❌ Error: config.json not found at {CONFIG_JSON}")
-    sys.exit(1)
+with open(CONFIG_JSON, 'r', encoding='utf-8-sig') as f:
+    config = json.load(f)
 
 # Extract variables from config
 DB_FILE = config['paths'].get('database_file', 'database/user_database.db')
