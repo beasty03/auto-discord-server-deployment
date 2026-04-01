@@ -30,27 +30,28 @@ async def check_bot_in_server(bot_token, guild_id):
     intents = discord.Intents.default()
     client = discord.Client(intents=intents)
     
-    result = {'in_server': False, 'guild_name': None}
+    result = {'in_server': False, 'guild_name': None, 'checked': False}
     
     @client.event
     async def on_ready():
+        result['checked'] = True  # Mark that we successfully connected
         guild = client.get_guild(int(guild_id))
         
         if guild:
             result['in_server'] = True
             result['guild_name'] = guild.name
-            print(f"✅ Bot is already in server: '{guild.name}'")
-            print(f"   Guild ID: {guild_id}\n")
+            print(f"[SUCCESS] Bot is already in server: '{guild.name}'")
+            print(f"          Guild ID: {guild_id}\n")
         else:
-            print(f"❌ Bot is NOT in the specified server (Guild ID: {guild_id})\n")
+            print(f"[INFO] Bot is NOT in the specified server (Guild ID: {guild_id})\n")
         
         await client.close()
     
     try:
         # Use asyncio.wait_for to add a timeout
-        await asyncio.wait_for(client.start(bot_token), timeout=5.0)
+        await asyncio.wait_for(client.start(bot_token), timeout=10.0)
     except asyncio.TimeoutError:
-        print("[WARNING] Connection timeout while checking bot status\n")
+        print("[WARNING] Connection timeout - cannot verify bot status\n")
         await client.close()
     except discord.LoginFailure:
         print("[ERROR] Invalid bot token\n")
@@ -62,8 +63,13 @@ async def check_bot_in_server(bot_token, guild_id):
         except:
             pass
     
-    return result['in_server'], result['guild_name']
-
+    # Only return True if we successfully checked AND bot is in server
+    if result['checked']:
+        return result['in_server'], result['guild_name']
+    else:
+        # If we couldn't check, assume bot is NOT in server (safe default)
+        return False, None
+    
 async def setup(bot: commands.Bot):
     pass  # This cog doesn't add any commands, just provides utility function
 
