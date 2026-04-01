@@ -42,4 +42,7 @@ pip install discord.py aiohttp'''
 
 ## First Run 
 
-Right-click setup.ps1 → ``` "Run with PowerShell" ```
+- Create a folder where you would like to keep your data 
+- Download the setup powershell script from the repo: link repo
+- Place the script in the folder 
+- Right-click setup.ps1 → ``` "Run with PowerShell" ```
