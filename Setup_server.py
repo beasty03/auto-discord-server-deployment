@@ -237,6 +237,19 @@ async def on_ready():
                     print(f'Created voice channel: {channel_name}')
         
         print('✅ Server setup complete!')
+                
+        # Remove bot from server
+        try:
+            print('Removing bot from server...')
+            await guild.leave()
+            print('✅ Bot has left the server')
+        except Exception as e:
+            print(f'❌ Error leaving server: {e}')
+        
+    except discord.Forbidden:
+        print('❌ Error: Bot does not have permission to manage server')
+    except Exception as e:
+        print(f'❌ Error during setup: {e}')
         
     except discord.Forbidden:
         print('❌ Error: Bot does not have permission to manage server')
