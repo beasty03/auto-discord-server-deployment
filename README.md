@@ -21,11 +21,11 @@ Automatically set up a complete Discord server with predefined roles, channels, 
 ### 2. Install Required Python Packages
 Open Command Prompt or PowerShell and run:
 ```bash
-pip install discord.py aiohttp
+pip install discord.py aiohttp'''
 
 
 ## Structure view 
-
+```
  auto-discord-server-deployment/
 ├── setup.ps1                      # Main PowerShell setup script
 ├── setup_bot.py                   # Discord bot that configures the server
@@ -38,8 +38,8 @@ pip install discord.py aiohttp
 └── templates/
     ├── moderation_template.json   # Moderation roles and channels template
     └── welcome_template.json      # Welcome channels template
-
+'''
 
 ## First Run 
 
-Right-click setup.ps1 → "Run with PowerShell"
+Right-click setup.ps1 → ``` "Run with PowerShell" ```
