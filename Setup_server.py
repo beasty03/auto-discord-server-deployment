@@ -13,7 +13,7 @@ with open(CONFIG_JSON, 'r', encoding='utf-8-sig') as f:
     config = json.load(f)
 
 # Extract variables from config
-SETUPBOT_TOKEN = config['bot_token']
+SETUPBOT_TOKEN = config['bot_token']  # Injected by setup.ps1
 GUILD_ID = config['server']['guild_id']
 TEMPLATE_DIR = config['paths']['template_dir']
 
@@ -57,7 +57,7 @@ async def create_role_with_permissions(guild, role_data):
     # Check if role already exists
     existing_role = discord.utils.get(guild.roles, name=role_data['name'])
     if existing_role:
-        print(f'Role already exists: {existing_role.name}')
+        print(f'Role already exists: {existing_role.name} - skipping creation')
         return existing_role
 
     perms_dict = role_data.get('permissions', {})
@@ -72,6 +72,7 @@ async def create_role_with_permissions(guild, role_data):
         color=color,
         hoist=hoist
     )
+    print(f'Created role: {role.name}')
     return role
 
 async def set_channel_permissions(channel, permissions_data, role_map):
@@ -106,6 +107,15 @@ async def on_ready():
     
     print(f'Found guild: {guild.name}')
     
+    # Get bot member object (needed for role operations)
+    bot_member = guild.get_member(bot.user.id)
+    if not bot_member:
+        print('Error: Could not find bot member in guild')
+        await bot.close()
+        return
+    
+    print(f'Bot member: {bot_member.name}')
+    
     try:
         # Change server name and icon
         new_server_name = config["server"]["name"]
@@ -132,11 +142,11 @@ async def on_ready():
         for channel in guild.channels:
             try:
                 await channel.delete()
-                print(f'Deleted: {channel.name}')
+                print(f'Deleted channel: {channel.name}')
                 await asyncio.sleep(0.5)
             except Exception as e:
-                print(f'Could not delete {channel.name}: {e}')
-        
+                print(f'Could not delete channel {channel.name}: {e}')
+
         print('Server cleaned!\n')
         
         # Load moderation template
@@ -161,7 +171,6 @@ async def on_ready():
             for role_data in mod_template['roles']:
                 role = await create_role_with_permissions(guild, role_data)
                 role_map[role.name] = role
-                print(f'Created role: {role.name}')
         
         # Create custom roles from config
         if 'custom_roles' in config and config['custom_roles']:
@@ -169,14 +178,12 @@ async def on_ready():
                 role_data = {'name': role_name}
                 role = await create_role_with_permissions(guild, role_data)
                 role_map[role_name] = role
-                print(f'Created custom role: {role_name}')
 
         # Create welcome roles if specified
         if welcome_template and 'roles' in welcome_template:
             for role_data in welcome_template['roles']:
                 role = await create_role_with_permissions(guild, role_data)
                 role_map[role.name] = role
-                print(f'Created welcome role: {role.name}')
 
         # Create categories and channels
         print('Creating Categories and Channels...')
@@ -245,11 +252,6 @@ async def on_ready():
             print('✅ Bot has left the server')
         except Exception as e:
             print(f'❌ Error leaving server: {e}')
-        
-    except discord.Forbidden:
-        print('❌ Error: Bot does not have permission to manage server')
-    except Exception as e:
-        print(f'❌ Error during setup: {e}')
         
     except discord.Forbidden:
         print('❌ Error: Bot does not have permission to manage server')
