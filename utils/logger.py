@@ -13,21 +13,34 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from datetime import datetime
 
-# Import configuration
+# ============================================================================
+# IMPORT CONFIGURATION
+# ============================================================================
+
 try:
-    from variables import (
-        ENABLE_FILE_LOGGING,
-        LOG_LEVEL,
-        LOG_FILE,
-        MAX_LOG_SIZE,
-        LOG_BACKUP_COUNT,
-        LOGS_DIR
-    )
-except ImportError:
-    # Fallback defaults if variables.py doesn't exist
+    from utils.config_loader import load_config
+    
+    config = load_config()
+    
+    # Get paths from config
+    if 'paths' in config:
+        LOGS_DIR = Path(config['paths'].get('logs_dir', 'logs'))
+        LOG_FILE = "bot.log"  # Just the filename, will be combined with LOGS_DIR
+    else:
+        LOGS_DIR = Path("logs")
+        LOG_FILE = "bot.log"
+    
+    # Logging settings (with fallback defaults)
     ENABLE_FILE_LOGGING = True
     LOG_LEVEL = "INFO"
-    LOG_FILE = "logs/bot.log"
+    MAX_LOG_SIZE = 5 * 1024 * 1024  # 5 MB
+    LOG_BACKUP_COUNT = 3
+    
+except ImportError:
+    # Fallback defaults if config_loader doesn't exist
+    ENABLE_FILE_LOGGING = True
+    LOG_LEVEL = "INFO"
+    LOG_FILE = "bot.log"
     MAX_LOG_SIZE = 5 * 1024 * 1024
     LOG_BACKUP_COUNT = 3
     LOGS_DIR = Path("logs")
@@ -64,8 +77,8 @@ def setup_logger(name: str = "discord_bot"):
     
     # Console format with colors
     console_format = ColoredFormatter(
-        '%(asctime)s | %(levelname)-8s | %(message)s',
-        datefmt='%H:%M:%S'
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
     )
     console_handler.setFormatter(console_format)
     logger.addHandler(console_handler)
@@ -78,7 +91,8 @@ def setup_logger(name: str = "discord_bot"):
         # Ensure log directory exists
         LOGS_DIR.mkdir(parents=True, exist_ok=True)
         
-        log_path = LOGS_DIR / LOG_FILE if not Path(LOG_FILE).is_absolute() else Path(LOG_FILE)
+        # Combine logs directory with log filename
+        log_path = LOGS_DIR / LOG_FILE
         
         file_handler = RotatingFileHandler(
             log_path,
@@ -90,7 +104,7 @@ def setup_logger(name: str = "discord_bot"):
         
         # File format (more detailed)
         file_format = logging.Formatter(
-            '%(asctime)s | %(name)-20s | %(levelname)-8s | %(funcName)-20s | %(message)s',
+            '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s - %(message)s',
             datefmt='%Y-%m-%d %H:%M:%S'
         )
         file_handler.setFormatter(file_format)
@@ -118,12 +132,20 @@ class ColoredFormatter(logging.Formatter):
     }
     
     def format(self, record):
-        # Add color to level name
-        levelname = record.levelname
-        if levelname in self.COLORS:
-            record.levelname = f"{self.COLORS[levelname]}{levelname}{self.COLORS['RESET']}"
+        # Store original levelname
+        original_levelname = record.levelname
         
-        return super().format(record)
+        # Add color to level name
+        if original_levelname in self.COLORS:
+            record.levelname = f"{self.COLORS[original_levelname]}{original_levelname}{self.COLORS['RESET']}"
+        
+        # Format the message
+        result = super().format(record)
+        
+        # Restore original levelname
+        record.levelname = original_levelname
+        
+        return result
 
 # ============================================================================
 # CONVENIENCE FUNCTIONS
@@ -137,6 +159,7 @@ def log_startup():
     logger.info(f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info(f"Log Level: {LOG_LEVEL}")
     logger.info(f"File Logging: {'Enabled' if ENABLE_FILE_LOGGING else 'Disabled'}")
+    logger.info(f"Logs Directory: {LOGS_DIR}")
     logger.info("=" * 60)
 
 def log_shutdown():
@@ -147,6 +170,23 @@ def log_shutdown():
     logger.info(f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info("=" * 60)
 
+def log_cog_loaded(cog_name: str):
+    """Logs when a cog is loaded"""
+    logger = logging.getLogger("discord_bot")
+    logger.info(f"✅ Loaded cog: {cog_name}")
+
+def log_cog_failed(cog_name: str, error: Exception):
+    """Logs when a cog fails to load"""
+    logger = logging.getLogger("discord_bot")
+    logger.error(f"❌ Failed to load cog: {cog_name}")
+    logger.error(f"   Error: {error}")
+
+def log_command_used(user: str, command: str, guild: str = None):
+    """Logs when a command is used"""
+    logger = logging.getLogger("discord_bot")
+    guild_info = f" in {guild}" if guild else ""
+    logger.info(f"Command '{command}' used by {user}{guild_info}")
+
 # ============================================================================
 # EXAMPLE USAGE
 # ============================================================================
@@ -155,8 +195,15 @@ if __name__ == "__main__":
     # Test the logger
     logger = setup_logger()
     
+    log_startup()
+    
     logger.debug("This is a debug message")
     logger.info("This is an info message")
     logger.warning("This is a warning message")
     logger.error("This is an error message")
     logger.critical("This is a critical message")
+    
+    log_cog_loaded("TestCog")
+    log_command_used("TestUser#1234", "/test", "Test Server")
+    
+    log_shutdown()
