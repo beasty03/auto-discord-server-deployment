@@ -33,7 +33,7 @@ Automatically set up a complete Discord server with predefined roles, channels, 
 Open Command Prompt or PowerShell and run:
 ```bash
 pip install discord.py aiohttp
-
+```
 
 ## Structure view 
 ```
