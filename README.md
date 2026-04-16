@@ -38,9 +38,6 @@ pip install discord.py aiohttp
 ## Structure view 
 ```
  auto-discord-server-deployment/
-├── setup.ps1                         # Main PowerShell setup script
-├── setup_bot.py                      # Bot config and Cog importation
-├── README.md                         # information file
 ├── cogs/
 │   ├──  Welcome (example)            # Imported script folder
 │   │     ├── Script.py               # Main script file
@@ -49,7 +46,6 @@ pip install discord.py aiohttp
 │   └──  ...
 │
 ├── setup_cogs/
-│   ├── database_manager.py           # Database management class
 │   ├── generate_invite.py            # Setup bot invite to server script        
 │   └── init_database.py              # Database initialization script
 │
@@ -59,14 +55,17 @@ pip install discord.py aiohttp
 │   └── welcome_template.json         # Welcome channels template
 │
 ├── utils/
-│   ├── config_loader.py              # Moderation roles and channels template
-│   └── logger.py                     # database template
+│   ├── config_loader.py              # multi bot logic
+│   └── logger.py                     # logging logic
 │
-├── database/                         # folder location for database (will be created automaticaly)
+├── database/                         # folder location for database (database will be created automaticaly)
 │
-├── config.json                       # information file
-├── Setup_server.py                   # information file
-├── launcher.py                       # information file
+├── config.json                       # configuration file for setup server and bot tokens
+├── Setup_server.py                   # script to create roles | voice and text channels | name server
+├── launcher.py                       # launcher for the bots
+├── setup.ps1                         # Main PowerShell setup script
+├── bot_config.ps1                    # Bot config and Cog importation
+├── README.md                         # information file
 ```
 
 ## First Run 
