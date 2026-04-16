@@ -126,7 +126,7 @@ Install these extensions for the best development experience:
 3. Search for the extension name
 4. Click **Install**
 
-
+------------------------------------------------------------------------------------------------------------
 
 # COG DEVELOPMENT GUIDE
  
