@@ -38,17 +38,35 @@ pip install discord.py aiohttp
 ## Structure view 
 ```
  auto-discord-server-deployment/
-├── setup.ps1                      # Main PowerShell setup script
-├── setup_bot.py                   # Discord bot that configures the server
-├── requirements.txt               # Python dependencies
-├── README.md                      # This file
-├── .gitignore                     # Git ignore file
+├── setup.ps1                         # Main PowerShell setup script
+├── setup_bot.py                      # Bot config and Cog importation
+├── README.md                         # information file
 ├── cogs/
-│   ├── database_manager.py        # Database management class
-│   └── init_database.py           # Database initialization script
-└── templates/
-    ├── moderation_template.json   # Moderation roles and channels template
-    └── welcome_template.json      # Welcome channels template
+│   ├──  Welcome (example)            # Imported script folder
+│   │     ├── Script.py               # Main script file
+│   │     ├── variables.py            # Main script variables file
+│   │     └── README.md               # Information about imported script
+│   └──  ...
+│
+├── setup_cogs/
+│   ├── database_manager.py           # Database management class
+│   ├── generate_invite.py            # Setup bot invite to server script        
+│   └── init_database.py              # Database initialization script
+│
+├── templates/
+│   ├── moderation_template.json      # Moderation roles and channels template
+│   ├── user_database_template.json   # database template
+│   └── welcome_template.json         # Welcome channels template
+│
+├── utils/
+│   ├── config_loader.py              # Moderation roles and channels template
+│   └── logger.py                     # database template
+│
+├── database/                         # folder location for database (will be created automaticaly)
+│
+├── config.json                       # information file
+├── Setup_server.py                   # information file
+├── launcher.py                       # information file
 ```
 
 ## First Run 
