@@ -126,75 +126,116 @@ Install these extensions for the best development experience:
 3. Search for the extension name
 4. Click **Install**
 
-------------------------------------------------------------------------------------------------------------
+---
+
+
+
+---
+
+  
 
 # COG DEVELOPMENT GUIDE
- 
+
 This guide ensures consistency and proper functionality when creating new cogs for the Discord bot.
- 
+
 ---
- 
+
 ## 📋 TABLE OF CONTENTS
- 
+
 1. [File Structure](#file-structure)
+
 2. [Required Imports](#required-imports)
+
 3. [Configuration Setup](#configuration-setup)
+
 4. [Database Setup (Optional)](#database-setup-optional)
+
 5. [Cog Class Structure](#cog-class-structure)
+
 6. [Setup Function](#setup-function)
+
 7. [Command Best Practices](#command-best-practices)
+
 8. [Error Handling](#error-handling)
+
 9. [Logging](#logging)
+
 10. [Testing Checklist](#testing-checklist)
+
 11. [Examples](#examples)
- 
+
 ---
- 
+
 ## 📁 FILE STRUCTURE
- 
+
 ### Standard Cog Location
- 
-### Naming Conventions
-- **Folder names**: PascalCase (e.g., `Casino`, `Moderation`)
-- **File names**: snake_case (e.g., `gamble.py`, `blackjack.py`)
-- **Class names**: PascalCase + "Cog" suffix (e.g., `GambleCog`, `BlackjackCog`)
- 
----
- 
-## 📦 REQUIRED IMPORTS
- 
-### Minimum Required Imports
-```python
-import discord
-from discord.ext import commands
-from discord import app_commands
-import sys
-from pathlib import Path
- ```
-# Add current folder to path for importing variables
-```sys.path.insert(0, str(Path(__file__).parent))
-import variables as var
-import sqlite3          # For database operations
-import random           # For random elements
-import time             # For cooldowns/timestamps
-from datetime import datetime, timedelta  # For time-based features
-import asyncio          # For async operations
 ```
+
+cogs/
+
+├── YourCategory/ # Category folder (e.g., Casino, Moderation, Fun)
+│ ├── init.py # Required (can be empty)
+│ ├── variables.py # Category-specific configuration
+│ ├── cog_name.py # Your cog file
+│ └── other_cog.py # Additional cogs in same category
+
+```
+ 
+
+### Naming Conventions
+
+-  **Folder names**: PascalCase (e.g., `Casino`, `Moderation`)
+
+-  **File names**: snake_case (e.g., `gamble.py`, `blackjack.py`)
+
+-  **Class names**: PascalCase + "Cog" suffix (e.g., `GambleCog`, `BlackjackCog`)
+
+### Additional Common Imports
+
+       
+
+-  **import sqlite3**          	For database operations
+-  **import random**         	For random elements
+-  **import time**					For cooldowns/timestamps
+-  **from datetime import datetime, timedelta**   For time-based features
+-  **import asyncio**         # For async operations
+---
+
+## 📦 REQUIRED IMPORTS
+
+### Minimum Required Imports
+
+```python
+
+import discord
+
+from discord.ext import commands
+
+from discord import app_commands
+
+import sys
+
+from pathlib import Path
+
+```
+## ⚙️ CONFIGURATION SETUP
+1. Create `variables.py` in Your Category Folder
+``` python 
 # variables.py
- ```
+
 from utils.config_loader import get_bot_token, load_config
 from pathlib import Path
- 
+
 # ============================================================================
 # CENTRAL CONFIG LOADER
 # ============================================================================
- 
+
 # Load bot token and config from central config.json
 BOT_TOKEN = get_bot_token()  # or get_bot_token('SpecificBotName')
 config = load_config()
 GUILD_ID = int(config['guild_id'])
 SERVER_NAME = config['server_name']
- 
+
 # Database path from config (nested under 'paths')
 if 'paths' in config:
     paths = config['paths']
@@ -214,33 +255,61 @@ else:
     DATABASE_DIR = PROJECT_ROOT / 'database'
     DATABASE_DIR.mkdir(exist_ok=True)
     DATABASE_NAME = str(DATABASE_DIR / 'user_database.db')
- 
+
 # ============================================================================
 # YOUR COG-SPECIFIC SETTINGS
 # ============================================================================
- 
+
 # Example settings
 FEATURE_ENABLED = True
 MAX_VALUE = 1000
 MIN_VALUE = 10
 COOLDOWN_SECONDS = 5
- 
+
 # Embed Colors (in hex)
 COLOR_SUCCESS = 0x00FF00  # Green
 COLOR_ERROR = 0xFF0000    # Red
 COLOR_WARNING = 0xFFA500  # Orange
 COLOR_INFO = 0x00BFFF     # Light Blue
- 
+
 # Messages
 MESSAGE_SUCCESS = "Operation completed successfully!"
 MESSAGE_ERROR = "An error occurred!"
+# Add current folder to path for importing variables
+
+```python
+sys.path.insert(0, str(Path(__file__).parent))
+
+import variables as var
+
+import sqlite3 # For database operations
+
+import random # For random elements
+
+import time # For cooldowns/timestamps
+
+from datetime import datetime, timedelta # For time-based features
+
+import asyncio # For async operations
+
+``` 
+2. Import Variables in Your Cog
+``` python
 import sys
 from pathlib import Path
- ```
+
 # Add Casino folder to path to import variables.py
-```
 sys.path.insert(0, str(Path(__file__).parent))
 import variables as var
+```
+--- 
+
+## 🗄️ DATABASE SETUP (OPTIONAL)
+
+### If Your Cog Uses a Database
+
+1. Create Database Initialization Function
+``` python
 def init_database():
     """Initialize the SQLite database and create tables if they don't exist."""
     conn = sqlite3.connect(var.DATABASE_NAME)
@@ -258,6 +327,9 @@ def init_database():
     conn.commit()
     conn.close()
     print(f"✅ Database initialized: {var.DATABASE_NAME}")
+```
+2. Create Helper Functions
+``` python
 def get_user_data(user_id: int):
     """Get user data from database."""
     conn = sqlite3.connect(var.DATABASE_NAME)
@@ -268,8 +340,8 @@ def get_user_data(user_id: int):
     
     conn.close()
     return result
- 
-def update_user_data(user_id: int, str):
+
+def update_user_data(user_id: int, data: str):
     """Update user data in database."""
     conn = sqlite3.connect(var.DATABASE_NAME)
     cursor = conn.cursor()
@@ -281,6 +353,17 @@ def update_user_data(user_id: int, str):
     
     conn.commit()
     conn.close()
+```
+3. Important Database Rules
+-   ✅ Always use **unique table names** (e.g., `casino`, `moderation_logs`, `user_levels`)
+-   ✅ Always **close connections** after use
+-   ✅ Use **parameterized queries** to prevent SQL injection: `cursor.execute('SELECT * FROM table WHERE id = ?', (value,))`
+-   ✅ Call `init_database()` in the `setup()` function
+---
+
+## 🏗️ COG CLASS STRUCTURE
+### Basic Template
+```python 
 class YourCog(commands.Cog):
     """Brief description of what this cog does."""
     
@@ -311,6 +394,19 @@ class YourCog(commands.Cog):
         )
         
         await interaction.response.send_message(embed=embed)
+```
+### Important Notes
+
+-   ✅ Class name should be descriptive + "Cog" suffix
+-   ✅ Always include `__init__` method with `bot` parameter
+-   ✅ Use `@app_commands.command` for slash commands
+-   ✅ Use `@app_commands.describe` to document parameters
+-   ✅ Always respond to interactions (or defer if processing takes time)
+---
+
+## 🔧 SETUP FUNCTION
+### Required at Bottom of Every Cog File
+``` python 
 async def setup(bot: commands.Bot):
     """
     Setup function to load this cog.
@@ -323,26 +419,49 @@ async def setup(bot: commands.Bot):
     await bot.add_cog(YourCog(bot))
     
     print("✅ YourCategory/YourCog loaded successfully")
+
+```
+### Important Rules
+
+-   ✅ **MUST** be named `setup`
+-   ✅ **MUST** be `async`
+-   ✅ **MUST** accept `bot: commands.Bot` parameter
+-   ✅ **MUST** call `await bot.add_cog(YourCog(bot))`
+-   ✅ Call `init_database()` here if your cog uses a database
+---
+
+## 💡 COMMAND BEST PRACTICES
+1. Always Use Embeds for Responses
+```python 
 embed = discord.Embed(
     title="Command Title",
     description="Main message",
     color=var.COLOR_SUCCESS
 )
- 
+
 embed.add_field(name="Field Name", value="Field Value", inline=True)
 embed.set_footer(text=f"Requested by {interaction.user.display_name}")
 embed.timestamp = datetime.utcnow()
- 
+
 await interaction.response.send_message(embed=embed)
+```
+2. Use Ephemeral for Errors
+```python 
 await interaction.response.send_message(
     embed=error_embed, 
     ephemeral=True  # Only visible to user
 )
+```
+3. Add Cooldowns
+```python 
 @app_commands.command(name="command")
 @app_commands.checks.cooldown(1, 60.0)  # 1 use per 60 seconds
 async def command(self, interaction: discord.Interaction):
     # Command logic
     pass
+```
+4. Defer Long Operations
+```python 
 @app_commands.command(name="command")
 async def command(self, interaction: discord.Interaction):
     # Defer response if operation takes > 3 seconds
@@ -353,6 +472,9 @@ async def command(self, interaction: discord.Interaction):
     
     # Send follow-up
     await interaction.followup.send(embed=embed)
+```
+5. Validate User Input
+```python 
 if amount <= 0:
     embed = discord.Embed(
         title="❌ Invalid Input",
@@ -361,6 +483,11 @@ if amount <= 0:
     )
     await interaction.response.send_message(embed=embed, ephemeral=True)
     return
+```
+---
+## 🛡️ ERROR HANDLING
+### Command-Level Error Handler
+```python 
 @command_name.error
 async def command_error(self, interaction: discord.Interaction, error):
     """Handle errors for this specific command."""
@@ -379,6 +506,9 @@ async def command_error(self, interaction: discord.Interaction, error):
             color=var.COLOR_ERROR
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
+```
+### Cog-Level Error Handler
+```python 
 async def cog_app_command_error(
     self, 
     interaction: discord.Interaction, 
@@ -395,24 +525,48 @@ async def cog_app_command_error(
     else:
         # Generic error
         pass
-from utils.logger import setup_logger
- 
-logger = setup_logger(__name__)
- ```
-# In your commands
 ```
+### 📝 LOGGING
+**Use the Logger**
+```python 
+from utils.logger import setup_logger
+
+logger = setup_logger(__name__)
+
+# In your commands
 logger.info(f"User {interaction.user} used command /commandname")
 logger.error(f"Error in command: {str(error)}")
 logger.warning(f"Warning: unusual behavior detected")
+``` 
+## ✅ TESTING CHECKLIST
+
+Before considering your cog complete:
+
+-   Cog loads without errors in launcher
+-   All commands appear in Discord (`/` autocomplete)
+-   Commands respond correctly
+-   Error messages are user-friendly
+-   Database tables are created correctly (if applicable)
+-   No SQL injection vulnerabilities
+-   Cooldowns work as expected
+-   Embeds display correctly
+-   Variables are properly imported from `variables.py`
+-   Code is commented and documented
+-   `setup()` function is present and correct
+-   No hardcoded values (use `variables.py`)
+---
+📚 EXAMPLES
+### Example 1: Simple Command (No Database)
+```python
 import discord
 from discord.ext import commands
 from discord import app_commands
 import sys
 from pathlib import Path
- 
+
 sys.path.insert(0, str(Path(__file__).parent))
 import variables as var
- 
+
 class PingCog(commands.Cog):
     """Simple ping command."""
     
@@ -432,20 +586,23 @@ class PingCog(commands.Cog):
         )
         
         await interaction.response.send_message(embed=embed)
- 
+
 async def setup(bot: commands.Bot):
     await bot.add_cog(PingCog(bot))
     print("✅ Utility/Ping cog loaded successfully")
+```
+### Example 2: Command with Database
+```python
 import discord
 from discord.ext import commands
 from discord import app_commands
 import sqlite3
 import sys
 from pathlib import Path
- 
+
 sys.path.insert(0, str(Path(__file__).parent))
 import variables as var
- 
+
 def init_database():
     conn = sqlite3.connect(var.DATABASE_NAME)
     cursor = conn.cursor()
@@ -457,7 +614,7 @@ def init_database():
     ''')
     conn.commit()
     conn.close()
- 
+
 def add_points(user_id: int, points: int):
     conn = sqlite3.connect(var.DATABASE_NAME)
     cursor = conn.cursor()
@@ -468,7 +625,7 @@ def add_points(user_id: int, points: int):
     ''', (user_id, points, points))
     conn.commit()
     conn.close()
- 
+
 class PointsCog(commands.Cog):
     """Points system."""
     
