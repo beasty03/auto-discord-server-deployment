@@ -49,7 +49,7 @@ pip install discord.py aiohttp
 └── templates/
     ├── moderation_template.json   # Moderation roles and channels template
     └── welcome_template.json      # Welcome channels template
-'''
+```
 
 ## First Run 
 
