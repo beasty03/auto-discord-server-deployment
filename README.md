@@ -174,10 +174,10 @@ This guide ensures consistency and proper functionality when creating new cogs f
 cogs/
 
 ├── YourCategory/ # Category folder (e.g., Casino, Moderation, Fun)
-│ ├── init.py # Required (can be empty)
-│ ├── variables.py # Category-specific configuration
-│ ├── cog_name.py # Your cog file
-│ └── other_cog.py # Additional cogs in same category
+│   ├── init.py # Required (can be empty)
+│   ├── variables.py # Category-specific configuration
+│   ├── cog_name.py # Your cog file
+│   └── other_cog.py # Additional cogs in same category
 
 ```
  
