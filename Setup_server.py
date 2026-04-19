@@ -230,10 +230,19 @@ async def on_ready():
                 category_name = category_data['name']
                 is_private = category_data.get('private', False)
 
-                # Build category-level overwrites if private
+                # Private category: deny @everyone, grant access to any roles
+                # that appear in the channel permissions inside this category
                 cat_overwrites = {}
                 if is_private:
                     cat_overwrites[guild.default_role] = discord.PermissionOverwrite(view_channel=False)
+                    allowed_roles = set()
+                    for ch in category_data.get('text_channels', []) + category_data.get('voice_channels', []):
+                        if isinstance(ch, dict):
+                            for r in ch.get('permissions', {}).get('view', []):
+                                allowed_roles.add(r)
+                    for role_name in allowed_roles:
+                        if role_name in role_map:
+                            cat_overwrites[role_map[role_name]] = discord.PermissionOverwrite(view_channel=True)
 
                 category = await guild.create_category(category_name, overwrites=cat_overwrites)
                 print(f'Created category: {category_name}{"  [private]" if is_private else ""}')
@@ -245,7 +254,7 @@ async def on_ready():
                     print(f'Created text channel: #{channel_name}')
                     if isinstance(channel_data, dict) and 'permissions' in channel_data:
                         await set_channel_permissions(channel, channel_data['permissions'], role_map)
-                        print(f'  Set permissions on #{channel_name}')
+                        print(f'  └─ permissions applied')
 
                 # Create voice channels
                 for channel_data in category_data.get('voice_channels', []):
@@ -254,7 +263,7 @@ async def on_ready():
                     print(f'Created voice channel: {channel_name}')
                     if isinstance(channel_data, dict) and 'permissions' in channel_data:
                         await set_channel_permissions(channel, channel_data['permissions'], role_map)
-                        print(f'  Set permissions on {channel_name}')
+                        print(f'  └─ permissions applied')
         
         print('✅ Server setup complete!')
                 
