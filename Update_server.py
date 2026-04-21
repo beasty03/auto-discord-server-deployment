@@ -294,6 +294,14 @@ async def run_update(guild):
 
     print('\n✅ Server update complete!')
 
+    # Leave the server — same as Setup_server.py
+    try:
+        print('Removing bot from server...')
+        await guild.leave()
+        print('✅ Bot has left the server')
+    except Exception as e:
+        print(f'❌ Error leaving server: {e}')
+
 
 async def sync_channels(guild, cat_obj, cat_data, role_map, cat_private):
     """
