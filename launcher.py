@@ -430,8 +430,14 @@ async def main():
     config = load_config()
     
     # 2. Get bot token
+    # Support --bot <name> argument so Flask can launch a specific bot
+    # without hitting the interactive input() prompt.
     logger.info("🔑 Selecting bot...")
-    bot_token, bot_name = get_bot_token(config)
+    import argparse
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument('--bot', default=None)
+    args, _ = parser.parse_known_args()
+    bot_token, bot_name = get_bot_token(config, bot_name=args.bot)
     logger.info(f"✅ Selected: {bot_name}\n")
     
     # 3. Discover available cogs
