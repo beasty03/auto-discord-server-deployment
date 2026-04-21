@@ -17,6 +17,13 @@ Setup_server.py, so Flask can call it the same way:
     python update_server.py <path/to/config.json>
 """
 
+import sys
+import io
+# Force UTF-8 output so emoji in print() don't crash on Windows (cp1252)
+if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
 import discord
 from discord.ext import commands
 import json
