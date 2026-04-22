@@ -1,23 +1,17 @@
 import sqlite3
-import sys
 from pathlib import Path
-from config_loader import load_config
 
-# Load the configuration
-config_file_path = str(Path(__file__).parent.parent.parent / 'config.json')  # Path to your config.json
-config = load_config(config_file_path)
+# Fallback database path: discord-server-setup/database/user_database.db
+_DEFAULT_DB = str(Path(__file__).parent.parent.parent / 'database' / 'user_database.db')
 
-# Use the database path from the configuration
-DATABASE_NAME = config["paths"]["database_file"]
-
-# Add the casino folder to the path to import its variables
-sys.path.insert(0, str(Path(__file__).parent.parent / 'casino'))
-import variables as var  # Import casino-specific variables
+STARTING_BALANCE = 1000  # default starting balance for new users
 
 class DatabaseManager:
-    def __init__(self, db_path=DATABASE_NAME):
+    def __init__(self, db_path: str = _DEFAULT_DB, starting_balance: int = STARTING_BALANCE):
         self.db_path = db_path
-        self.init_tables()  # Automatically create tables on initialization
+        self.starting_balance = starting_balance
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        self.init_tables()
 
     def init_tables(self):
         """Initialize the SQLite database and create tables if they don't exist."""
@@ -63,10 +57,10 @@ class DatabaseManager:
         result = cursor.fetchone()
 
         if result is None:
-            cursor.execute('INSERT INTO casino (user_id, balance) VALUES (?, ?)', (user_id, var.STARTING_BALANCE))
+            cursor.execute('INSERT INTO casino (user_id, balance) VALUES (?, ?)', (user_id, self.starting_balance))
             conn.commit()
             conn.close()
-            return var.STARTING_BALANCE
+            return self.starting_balance
 
         conn.close()
         return result[0]
