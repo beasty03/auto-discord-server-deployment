@@ -145,3 +145,7 @@ class DatabaseManager:
                 'SELECT user_id, balance, games_played FROM casino ORDER BY balance DESC LIMIT ?',
                 (count,)
             ).fetchall()
+
+
+async def setup(bot):
+    pass
