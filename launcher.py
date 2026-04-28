@@ -64,10 +64,17 @@ BOT_STATUS_TYPE = "watching"
 
 import logging
 
+_LOG_DIR = SCRIPT_DIR / 'logs'
+_LOG_DIR.mkdir(exist_ok=True)
+_LOG_FILE = _LOG_DIR / 'bot.log'
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    datefmt='%Y-%m-%d %H:%M:%S',
+    handlers=[
+        logging.FileHandler(_LOG_FILE, encoding='utf-8'),
+    ]
 )
 logger = logging.getLogger("launcher")
 
@@ -378,7 +385,25 @@ def setup_events(bot: commands.Bot):
                 logger.info("✅ Slash commands synced")
         except Exception as e:
             logger.warning(f"⚠️  Could not sync slash commands: {e}")
-        
+
+        # Self-assign the bots role so this bot appears in the hoisted group
+        try:
+            guild_id = bot.config.get('server', {}).get('guild_id') or bot.config.get('guild_id')
+            bots_role_name = bot.config.get('bots_role_name', 'bots')
+            if guild_id:
+                real_guild = bot.get_guild(int(guild_id))
+                if real_guild:
+                    bots_role = discord.utils.get(real_guild.roles, name=bots_role_name)
+                    if bots_role:
+                        bot_member = real_guild.get_member(bot.user.id)
+                        if bot_member and bots_role not in bot_member.roles:
+                            await bot_member.add_roles(bots_role)
+                            logger.info(f'✅ Assigned "{bots_role_name}" role to self')
+                    else:
+                        logger.warning(f'⚠️  Bots role "{bots_role_name}" not found in guild')
+        except Exception as e:
+            logger.warning(f"⚠️  Could not assign bots role: {e}")
+
         logger.info("\n✨ Bot is ready to use!\n")
     
     @bot.event
