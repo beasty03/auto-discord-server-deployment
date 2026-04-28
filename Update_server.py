@@ -46,7 +46,8 @@ SETUPBOT_TOKEN = config['bot_token']
 GUILD_ID       = config['server']['guild_id']
 TEMPLATE_DIR   = config['paths']['template_dir']
 
-MOD_TEMPLATE_PATH = os.path.join(TEMPLATE_DIR, 'moderation_template.json')
+MOD_TEMPLATE_PATH     = os.path.join(TEMPLATE_DIR, 'moderation_template.json')
+WELCOME_TEMPLATE_PATH = os.path.join(TEMPLATE_DIR, 'welcome_template.json')
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='!', intents=intents)
@@ -55,6 +56,11 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def get_color(color_name):
+    if color_name and color_name.startswith('#'):
+        try:
+            return discord.Color(int(color_name[1:], 16))
+        except ValueError:
+            return discord.Color.default()
     colors = {
         'red': discord.Color.red(), 'orange': discord.Color.orange(),
         'yellow': discord.Color.yellow(), 'green': discord.Color.green(),
@@ -78,10 +84,27 @@ async def get_icon_bytes(icon_path, icon_type):
 
 
 async def ensure_role(guild, role_name, role_data=None):
-    """Return existing role or create it. Never deletes."""
+    """Return existing role or create it, updating color/hoist if provided."""
     existing = discord.utils.get(guild.roles, name=role_name)
     if existing:
-        print(f'  Role exists: {role_name}')
+        if role_data:
+            edits = {}
+            raw_color = role_data.get('color')
+            if raw_color:
+                new_color = get_color(raw_color)
+                if new_color.value != existing.color.value:
+                    edits['color'] = new_color
+            raw_hoist = role_data.get('hoist')
+            if raw_hoist is not None and raw_hoist != existing.hoist:
+                edits['hoist'] = raw_hoist
+            if edits:
+                try:
+                    await existing.edit(**edits)
+                    print(f'  Updated role: {role_name} ({", ".join(edits)})')
+                except Exception as e:
+                    print(f'  Could not update role {role_name}: {e}')
+        else:
+            print(f'  Role exists: {role_name}')
         return existing
     perms = discord.Permissions(**(role_data or {}).get('permissions', {}))
     color = get_color((role_data or {}).get('color', 'default'))
@@ -173,8 +196,15 @@ async def run_update(guild):
             desired_role_names.add(r['name'])
 
     # Custom roles from config
-    for role_name in config.get('custom_roles', []):
-        desired_role_names.add(role_name)
+    for entry in config.get('custom_roles', []):
+        desired_role_names.add(entry['name'] if isinstance(entry, dict) else str(entry))
+
+    # Welcome template roles — protect from deletion
+    if config.get('use_welcome_template', False) and os.path.exists(WELCOME_TEMPLATE_PATH):
+        with open(WELCOME_TEMPLATE_PATH, 'r', encoding='utf-8') as f:
+            _wt = json.load(f)
+        for r in _wt.get('roles', []):
+            desired_role_names.add(r['name'])
 
     # Build role_map (existing + newly created)
     role_map = {}
@@ -186,9 +216,55 @@ async def run_update(guild):
             role_map[role_data['name']] = role
 
     # Create missing custom roles
-    for role_name in config.get('custom_roles', []):
-        role = await ensure_role(guild, role_name)
+    for entry in config.get('custom_roles', []):
+        if isinstance(entry, dict):
+            role_name = entry['name']
+            perms_list = entry.get('permissions', [])
+            role_data = {
+                'name': role_name,
+                'permissions': {p: True for p in perms_list} if isinstance(perms_list, list) else perms_list,
+                'color': entry.get('color', 'default'),
+                'hoist': entry.get('hoist', False),
+            }
+        else:
+            role_name = str(entry)
+            role_data = None
+        role = await ensure_role(guild, role_name, role_data)
         role_map[role_name] = role
+
+    # Create/ensure bots role (hoisted so bots appear separately in the member list)
+    bots_role_name = config.get('bots_role_name', 'bots')
+    desired_role_names.add(bots_role_name)
+    bots_role_obj = await ensure_role(guild, bots_role_name, {'color': 'blue', 'hoist': True})
+
+    # Assign the bots role to all configured runtime bots.
+    # The update bot is invited with Administrator, so it can assign any role regardless of position.
+    for bot_entry in config.get('discord_bots', []):
+        token = bot_entry.get('token', '')
+        if not token:
+            continue
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    'https://discord.com/api/v10/users/@me',
+                    headers={'Authorization': f'Bot {token}'}
+                ) as resp:
+                    if resp.status != 200:
+                        print(f'  ⚠️  Could not fetch user for bot {bot_entry.get("name")}: HTTP {resp.status}')
+                        continue
+                    data = await resp.json()
+                    bot_user_id = int(data['id'])
+            member = guild.get_member(bot_user_id)
+            if member is None:
+                print(f'  ⚠️  Bot {bot_entry.get("name")} is not in this guild — skipping role assignment')
+                continue
+            if bots_role_obj and bots_role_obj not in member.roles:
+                await member.add_roles(bots_role_obj, reason='Assigned bots role by update bot')
+                print(f'  ✅ Assigned "{bots_role_name}" role to {bot_entry.get("name")}')
+            else:
+                print(f'  Role "{bots_role_name}" already assigned to {bot_entry.get("name")}')
+        except Exception as e:
+            print(f'  ⚠️  Could not assign bots role to {bot_entry.get("name")}: {e}')
 
     # Also map any other existing roles (so permissions work)
     for role in guild.roles:
