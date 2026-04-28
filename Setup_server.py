@@ -243,6 +243,9 @@ async def on_ready():
                     channel_name = channel_data['name'] if isinstance(channel_data, dict) else channel_data
                     channel = await guild.create_voice_channel(channel_name, category=category)
                     print(f'Created voice channel: {channel_name}')
+                    if isinstance(channel_data, dict) and 'permissions' in channel_data:
+                        await set_channel_permissions(channel, channel_data['permissions'], role_map)
+                        print(f'  └─ permissions applied')
 
         # Create welcome category and channels if specified
         if welcome_template:
