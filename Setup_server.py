@@ -33,7 +33,12 @@ intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 def get_color(color_name):
-    """Convert color name to discord.Color"""
+    """Convert color name or hex string to discord.Color"""
+    if color_name and color_name.startswith('#'):
+        try:
+            return discord.Color(int(color_name[1:], 16))
+        except ValueError:
+            return discord.Color.default()
     colors = {
         'red': discord.Color.red(),
         'orange': discord.Color.orange(),
@@ -45,7 +50,7 @@ def get_color(color_name):
         'gold': discord.Color.gold(),
         'default': discord.Color.default()
     }
-    return colors.get(color_name.lower(), discord.Color.default())
+    return colors.get((color_name or 'default').lower(), discord.Color.default())
 
 async def get_icon_bytes(icon_path, icon_type):
     """Convert icon to bytes for Discord API"""
@@ -181,8 +186,19 @@ async def on_ready():
         
         # Create custom roles from config
         if 'custom_roles' in config and config['custom_roles']:
-            for role_name in config['custom_roles']:
-                role_data = {'name': role_name}
+            for entry in config['custom_roles']:
+                if isinstance(entry, dict):
+                    role_name = entry['name']
+                    perms_list = entry.get('permissions', [])
+                    role_data = {
+                        'name': role_name,
+                        'permissions': {p: True for p in perms_list} if isinstance(perms_list, list) else perms_list,
+                        'color': entry.get('color', 'default'),
+                        'hoist': entry.get('hoist', False),
+                    }
+                else:
+                    role_name = str(entry)
+                    role_data = {'name': role_name}
                 role = await create_role_with_permissions(guild, role_data)
                 role_map[role_name] = role
 
@@ -191,6 +207,16 @@ async def on_ready():
             for role_data in welcome_template['roles']:
                 role = await create_role_with_permissions(guild, role_data)
                 role_map[role.name] = role
+
+        # Create bots role (hoisted so bots appear separately in the member list)
+        bots_role_name = config.get('bots_role_name', 'bots')
+        bots_role = await create_role_with_permissions(guild, {
+            'name': bots_role_name,
+            'permissions': {},
+            'color': 'blue',
+            'hoist': True,
+        })
+        role_map[bots_role_name] = bots_role
 
         # Create categories and channels
         print('Creating Categories and Channels...')
