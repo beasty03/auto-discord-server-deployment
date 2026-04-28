@@ -1,6 +1,9 @@
 import sqlite3
 import time
+import logging
 from pathlib import Path
+
+_log = logging.getLogger("launcher")
 
 _DEFAULT_DB = str(Path(__file__).parent.parent.parent / 'database' / 'user_database.db')
 STARTING_BALANCE = 1000
@@ -45,7 +48,7 @@ class DatabaseManager:
                     FOREIGN KEY (user_id) REFERENCES casino (user_id)
                 )
             ''')
-        print(f"✅ Database initialised: {self.db_path}")
+        _log.info(f"✅ Database initialised: {self.db_path}")
 
     # ------------------------------------------------------------------ #
     # Extension point — any cog can register its own table               #
